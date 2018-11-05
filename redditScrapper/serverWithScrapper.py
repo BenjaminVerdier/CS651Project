@@ -1,4 +1,7 @@
 # Python 3 server example
+# To launch the server, run python3 serverWithScrapper [port number]
+
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
 import praw
@@ -41,7 +44,11 @@ def loadRedditObj():
 #def loadPostComments(post, numberOfComments, sorting)
 
 hostName = "localhost"
-serverPort = int(sys.argv[1])
+
+if (len(sys.argv) > 1):
+    serverPort = int(sys.argv[1])
+else:
+    serverPort = 8080 #Default port, can be changed
 
 class MyServer(BaseHTTPRequestHandler):
     reddit = loadRedditObj()
