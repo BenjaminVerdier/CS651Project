@@ -8,11 +8,9 @@ import praw
 import sys
 from enum import Enum
 
-#TODO: create a post class with: Id, subreddit, score, content, url
-#TODO: create a comment class with: Id, post, score, content
-
-#Or: do a general content class that can be a post or a comment with: Id, parent(subreddit/post), score, content, url
-
+#TODO: fill loadPostComments and loadSubredditPosts. The idea is to have two cases, one if reddit.com is reachable
+#      and one when it's not. In both cases, we try to get stuff from our own db first. Then if we do fetch data
+#      remotely, we need to add them to the db.
 class ContentType(Enum):
     POST = 'post'
     COMMENT = 'comment'
