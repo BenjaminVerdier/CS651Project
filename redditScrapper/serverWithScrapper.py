@@ -9,9 +9,9 @@ import sys
 from enum import Enum
 import sqlite3
 
-#TODO: fill loadPostComments and loadSubredditPosts. The idea is to have two cases, one if reddit.com is reachable
-#      and one when it's not. In both cases, we try to get stuff from our own db first. Then if we do fetch data
-#      remotely, we need to add them to the db.
+#TODO:  Add a query id to queries database, and make it a foreign key in the submissions
+#       table, so we can check when a particular submission has been last updated.
+#       This would be nice but at this moment it does not serve any real purpose in our project.
 class ContentType(Enum):
     POST = 'post'
     COMMENT = 'comment'
@@ -30,6 +30,12 @@ class CommentSortingOrder(Enum):
     CONTROVERSIAL = 'controversial'
     OLD = 'old'
     #Qna?
+
+class Query:
+    def __init__(self, upperLevelId, sortingOrder, date):
+        self.upperLevelId = str(upperLevelId) #subreddit or post from which we query the posts/comments
+        self.sortingOrder = str(sortingOrder)
+        self.date = int(date) #date of the query, so we can evaluate how stale the data is. In seconds since the epoch
 
 class Content:
     #Question: Do we want the permalink as well?
@@ -62,12 +68,12 @@ def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
     }
 
     posts = sortSwitcher[sorting]
-
+    query = Query(subreddit, sorting,time.time())
     formatedPosts = []
     for post in posts:
         formatedPosts.append(Content(post.id, post.subreddit, post.score, post.author, post.title, post.selftext, "", post.url, post.created_utc, ContentType.POST))
 
-    return formatedPosts
+    return formatedPosts, query
 
 def loadPostComments(reddit, post, numberOfComments, sorting):
     #If reddit is reachable:
@@ -75,7 +81,7 @@ def loadPostComments(reddit, post, numberOfComments, sorting):
     sub.comment_sort = sorting
     #sub.comments.replace_more(limit=0)
     comments = sub.comments.list()[:numberOfComments]
-    print(comments)
+    query = Query(post, sorting,time.time())
     formatedComments = []
     for com in comments:
         #We need to filter the 'more comments' stuff:
@@ -83,20 +89,34 @@ def loadPostComments(reddit, post, numberOfComments, sorting):
             post = reddit.comment(com)
             formatedComments.append(Content(post.id, post.link_id, post.score, post.author, "", post.body, post.parent_id, "", post.created_utc, ContentType.COMMENT))
 
-    return formatedComments
+    return formatedComments, query
 
-def saveSubmissionToDb(submissions):
+def saveSubmissionToDb(submissions, query):
     dbName = hostName + '_' + str(serverPort) + '_localReddit' + '.db'
-    tableName = 'submission'
+    #Right now those names are hardcoded in the queries but it may be better to use these variables
+    subTableName = 'submission'
+    recordTableName = 'queries'
+
+    #Connection to database
     conn = sqlite3.connect(dbName)
     c = conn.cursor()
     print("Connected to local database: " + dbName)
+
+    #Verification that both submissions and queries tables exist, creating them if not
     c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='submissions';''')
     if c.fetchone() == None:
         c.execute('''CREATE TABLE submissions
         (id text unique, upperLevelId text, score integer, author text, title text, content text, parent text, url text, creation_date integer, type integer)
         ;''')
         conn.commit()
+    c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='queries';''')
+    if c.fetchone() == None:
+        c.execute('''CREATE TABLE queries
+        (upperLevelId text, sorting text, date integer, PRIMARY KEY (upperLevelId, sorting))
+        ;''')
+        conn.commit()
+
+    #Insertion of posts/comments to submissions
     cleanedSubs = []
     for sub in submissions:
         if sub.type == ContentType.POST:
@@ -104,9 +124,19 @@ def saveSubmissionToDb(submissions):
         else:
             cleanedSubs.append((sub.id, sub.upperLevelId, sub.score, sub.author, '', sub.content, sub.parent, '', sub.creation_date, 1))
     c.executemany('INSERT OR REPLACE INTO submissions VALUES (?,?,?,?,?,?,?,?,?,?)', cleanedSubs)
+
+    #Insertion of query to queries
+    queryToInsert = (query.upperLevelId, query.sortingOrder, query.date)
+    c.execute('INSERT OR REPLACE INTO queries VALUES (?,?,?)', queryToInsert)
+
+    #committing insertions
     conn.commit()
-    for row in c.execute('''SELECT id FROM submissions;'''):
+
+    #Debug
+    for row in c.execute('''SELECT upperLevelId FROM queries;'''):
         print(row)
+
+    #Closing Connection
     conn.close()
     print("Database connection closed.")
 
@@ -127,8 +157,8 @@ class MyServer(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes("<html><head><title>Local Reddit</title></head>", "utf-8"))
         self.wfile.write(bytes("<body>", "utf-8"))
-        posts = loadSubredditPosts(self.reddit, 'all', 10, PostSortingOrder.TOP)
-        saveSubmissionToDb(posts)
+        posts, query = loadSubredditPosts(self.reddit, 'all', 10, PostSortingOrder.TOP)
+        saveSubmissionToDb(posts, query)
         for submission in posts:
             self.wfile.write(bytes("<p><a href=\"" + str(submission.url) + "\">" + str(submission.title) + "</a> ("+ "<a href=\"https://www.reddit.com/r/" + str(submission.parent) + "\">r/" + str(submission.parent) + "</a>" + ")</p>", "utf-8"))
         self.wfile.write(bytes("</body></html>", "utf-8"))
