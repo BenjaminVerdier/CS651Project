@@ -41,7 +41,7 @@ class Remote(object):
 		return (self.address_.__hash__() + offset) % SIZE
 
 	def send(self, msg):
-		self.socket_.sendall(msg + "\r\n")
+		self.socket_.sendall((msg + "\r\n").encode())
 		self.last_msg_send_ = msg
 		# print "send: %s <%s>" % (msg, self.address_)
 
@@ -54,7 +54,7 @@ class Remote(object):
 		try:
 			s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			s.connect((self.address_.ip, self.address_.port))
-			s.sendall("\r\n")
+			s.sendall("\r\n".encode())
 			s.close()
 			return True
 		except socket.error:

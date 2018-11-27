@@ -6,7 +6,7 @@ from chord import *
 
 
 def check_key_lookup(peers, hash_list):
-	print "Running key lookup consistency test"
+	print("Running key lookup consistency test")
 	for key in range(SIZE):
 		# select random node
 		node = peers[random.randrange(len(peers))]
@@ -19,13 +19,13 @@ def check_key_lookup(peers, hash_list):
 					try:
 						assert target.id() == hash_list[(i+1)%len(peers)]
 						break
-					except Exception, e:
-						print "Fail number %s, %s to abort" % (tries, 4-tries)
+					except Exception as e:
+						print("Fail number %s, %s to abort") % (tries, 4-tries)
 						tries += 1
 						if tries > 4:
 							raise e
 						time.sleep(1.5 ** tries)
-	print "Finished key lookup consistency test, all good"
+	print("Finished key lookup consistency test, all good")
 
 """
 def data_fusser(peers):
@@ -59,28 +59,35 @@ address_list = map(lambda addr: Address('127.0.0.1', addr), list(set(map(lambda 
 # keep unique ones
 address_list = sorted(set(address_list))
 # hash the addresses
-hash_list 	 = map(lambda addr: addr.__hash__(), address_list)
-hash_list.sort()
+hash_list 	 = sorted(map(lambda addr: addr.__hash__(), address_list))
+print(hash_list)
 # create the nodes
 locals_list   = []
 for i in range(0, len(address_list)):
 	try:
+		local = None
 		if len(locals_list) == 0:
+			print("we go here when the list is empty")
 			local = Local(address_list[i])
+			print("we created our first peer")
 		else:
 			# use a random already created peer's address
 			# as a remote
+			print("we go here when we have existing peers")
 			local = Local(address_list[i], locals_list[random.randrange(len(locals_list))].address_)
+			print("we created a new peer")
+
+		local.start()
+		locals_list.append(local)
+		time.sleep(0.1)
 	except socket.error: # socket bussy
+		print("we delete the peer because the socket is busy")
 		del hash_list[address_list[i].__hash__()]
-	local.start()
-	locals_list.append(local)
-	time.sleep(0.1)
 
 # We need to give it some time to stabilize
 time.sleep(20)
 
-print "done creating peers, our pid is %s (for `kill -9`)" % os.getpid()
+print("done creating peers, our pid is %s (for `kill -9`)" % os.getpid())
 
 # check key lookup consistency
 check_key_lookup(locals_list, hash_list)
@@ -92,5 +99,5 @@ check_key_lookup(locals_list, hash_list)
 for local in locals_list:
 	msocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	msocket.connect((local.address_.ip, local.address_.port))
-	msocket.sendall('shutdown\r\n')
+	msocket.sendall('shutdown\r\n'.encode())
 	msocket.close()

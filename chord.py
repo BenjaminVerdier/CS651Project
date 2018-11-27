@@ -5,7 +5,6 @@ import socket
 import threading
 import random
 import time
-import mutex
 
 from address import Address, inrange
 from remote import Remote
@@ -38,7 +37,7 @@ def retry_on_socket_error(retry_limit):
 					time.sleep(2 ** retry_count)
 					retry_count += 1
 			if retry_count == retry_limit:
-				print "Retry count limit reached, aborting.. (%s)" % func.__name__
+				print("Retry count limit reached, aborting.. (%s)" % func.__name__)
 				self.shutdown_ = True
 				sys.exit(-1)
 		return inner
@@ -59,7 +58,7 @@ class Daemon(threading.Thread):
 class Local(object):
 	def __init__(self, local_address, remote_address = None):
 		self.address_ = local_address
-		print "self id = %s" % self.id()
+		print("self id = %s" % self.id())
 		self.shutdown_ = False
 		# list of successors
 		self.successors_ = []
@@ -70,7 +69,7 @@ class Local(object):
 		# initially no commands
 		self.command_ = []
 
-	
+
 	# is this id within our range?
 	def is_ours(self, id):
 		assert id >= 0 and id < SIZE
@@ -83,7 +82,7 @@ class Local(object):
 
 	# logging function
 	def log(self, info):
-	    f = open("/tmp/chord.log", "a+")
+	    f = open("chord.log", "a+")
 	    f.write(str(self.id()) + " : " +  info + "\n")
 	    f.close()
 	    #print str(self.id()) + " : " +  info
@@ -104,7 +103,7 @@ class Local(object):
 
 	def join(self, remote_address = None):
 		# initially just set successor
-		self.finger_ = map(lambda x: None, range(LOGSIZE))
+		self.finger_ = list(map(lambda x: None, range(LOGSIZE)))
 
 		self.predecessor_ = None
 
@@ -170,7 +169,7 @@ class Local(object):
 		# if we are not alone in the ring, calculate
 		if suc.id() != self.id():
 			successors = [suc]
-			suc_list = suc.get_successors()
+			suc_list = list(suc.get_successors())
 			if suc_list and len(suc_list):
 				successors += suc_list
 			# if everything worked, we update
@@ -192,7 +191,7 @@ class Local(object):
 			if remote.ping():
 				self.finger_[0] = remote
 				return remote
-		print "No successor available, aborting"
+		print("No successor available, aborting")
 		self.shutdown_ = True
 		sys.exit(-1)
 
@@ -272,7 +271,7 @@ class Local(object):
 				npredecessor = Address(request.split(' ')[0], int(request.split(' ')[1]))
 				self.notify(Remote(npredecessor))
 			if command == 'get_successors':
-				result = json.dumps(self.get_successors())
+				result = json.dumps(list(self.get_successors()))
 
 			# or it could be a user specified operation
 			for t in self.command_:

@@ -3,7 +3,7 @@
 def read_from_socket(s):
 	result = ""
 	while 1:
-		data = s.recv(256)
+		data = s.recv(256).decode()
 		if data[-2:] == "\r\n":
 			result += data[:-2]
 			break
@@ -15,4 +15,4 @@ def read_from_socket(s):
 # sends all on socket, adding "\r\n"
 def send_to_socket(s, msg):
 #	print "respond : %s" % msg
-	s.sendall(str(msg) + "\r\n")
+	s.sendall((str(msg) + "\r\n").encode())
