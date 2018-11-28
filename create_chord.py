@@ -3,6 +3,7 @@ import sys
 import time
 import socket
 import random
+import subprocess
 from chord import *
 
 nnodes = int(sys.argv[1])
@@ -44,6 +45,8 @@ while 1:
 				address_list.append(address)
 				locals_list.append(Local(address, locals_list[random.randrange(len(locals_list))].address_))
 				break
+	elif command == "kill_all":
+		subprocess.Popen("taskkill /F /PID " + str(os.getpid()))
 	else:
 		address = address_list[random.randrange(len(address_list))]
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
