@@ -11,7 +11,7 @@ from address import Address, inrange
 from remote import Remote
 from settings import *
 from network import *
-from local_reddit_classes import *
+from local_reddit import *
 
 
 def repeat_and_sleep(sleep_time):
@@ -45,30 +45,6 @@ def retry_on_socket_error(retry_limit):
 				sys.exit(-1)
 		return inner
 	return decorator
-
-def loadRedditObj():
-    userAgent = "python:decentralizedRedditProject:0.0 (by /u/buprojectaccount )"
-    return praw.Reddit(client_id='NOElzEMDmrk2-Q',
-                         client_secret='V-2RNfaQ5ryNEIbJZ8PXe1XSu-M',
-                         user_agent=userAgent)
-
-def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
-    #If reddit is reachable:
-    sortSwitcher = {
-        PostSortingOrder.NEW:reddit.subreddit(subreddit).new(limit=numberOfPosts),
-        PostSortingOrder.TOP:reddit.subreddit(subreddit).top(limit=numberOfPosts),
-        PostSortingOrder.HOT:reddit.subreddit(subreddit).hot(limit=numberOfPosts),
-        PostSortingOrder.CONTROVERSIAL:reddit.subreddit(subreddit).controversial(limit=numberOfPosts),
-        PostSortingOrder.RISING:reddit.subreddit(subreddit).rising(limit=numberOfPosts),
-    }
-
-    posts = sortSwitcher[sorting]
-    query = Query(subreddit, sorting,time.time())
-    formatedPosts = []
-    for post in posts:
-        formatedPosts.append(Content(post.id, post.subreddit, post.score, post.author, post.title, post.selftext, "", post.url, post.created_utc, ContentType.POST))
-
-    return formatedPosts, query
 
 # deamon to run Local's run method
 class Daemon(threading.Thread):
@@ -300,6 +276,8 @@ class Local(object):
 			if command == 'get_successors':
 				result = json.dumps(list(self.get_successors()))
 			if command == 'get_posts':
+				#TODO: add parsing of request to get info such as subreddit/post, number of item, sorting order.
+				#TODO: after parsing, use send_to_right_node code to send the command to the right node.
 				posts, query = loadSubredditPosts(self.reddit_, 'all', 10, PostSortingOrder.TOP)
 				titles = []
 				for p in posts:
@@ -315,6 +293,7 @@ class Local(object):
 					newSock.connect((pred.address_.ip, pred.address_.port))
 					newSock.sendall((command + ' ' + request+ "\r\n").encode())
 					print("Sent request to successor")
+					#NOTE: 10000 is arbitrary, it may be sufficient for small request but it will probably break at some point
 					result = newSock.recv(10000).decode()
 					print("received answer from successor")
 					newSock.close()
