@@ -305,6 +305,19 @@ class Local(object):
 				for p in posts:
 					titles.append(p.title)
 				result = json.dumps(titles)
+			if command == 'send_to_right_node':
+				print(json.dumps((self.address_.ip, self.address_.port)) + " received following command: " + command + " " + request)
+				if self.is_ours(int(request)):
+					result = "Yes"
+				else:
+					succ = self.find_successor(int(request))
+					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					newSock.connect((pred.address_.ip, pred.address_.port))
+					newSock.sendall((command + ' ' + request+ "\r\n").encode())
+					print("Sent request to successor")
+					result = newSock.recv(10000).decode()
+					print("received answer from successor")
+					newSock.close()
 			# or it could be a user specified operation
 			for t in self.command_:
 				if command == t[0]:
