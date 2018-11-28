@@ -5,11 +5,14 @@ import socket
 import threading
 import random
 import time
+import praw
 
 from address import Address, inrange
 from remote import Remote
 from settings import *
 from network import *
+from local_reddit_classes import *
+
 
 def repeat_and_sleep(sleep_time):
 	def decorator(func):
@@ -43,6 +46,29 @@ def retry_on_socket_error(retry_limit):
 		return inner
 	return decorator
 
+def loadRedditObj():
+    userAgent = "python:decentralizedRedditProject:0.0 (by /u/buprojectaccount )"
+    return praw.Reddit(client_id='NOElzEMDmrk2-Q',
+                         client_secret='V-2RNfaQ5ryNEIbJZ8PXe1XSu-M',
+                         user_agent=userAgent)
+
+def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
+    #If reddit is reachable:
+    sortSwitcher = {
+        PostSortingOrder.NEW:reddit.subreddit(subreddit).new(limit=numberOfPosts),
+        PostSortingOrder.TOP:reddit.subreddit(subreddit).top(limit=numberOfPosts),
+        PostSortingOrder.HOT:reddit.subreddit(subreddit).hot(limit=numberOfPosts),
+        PostSortingOrder.CONTROVERSIAL:reddit.subreddit(subreddit).controversial(limit=numberOfPosts),
+        PostSortingOrder.RISING:reddit.subreddit(subreddit).rising(limit=numberOfPosts),
+    }
+
+    posts = sortSwitcher[sorting]
+    query = Query(subreddit, sorting,time.time())
+    formatedPosts = []
+    for post in posts:
+        formatedPosts.append(Content(post.id, post.subreddit, post.score, post.author, post.title, post.selftext, "", post.url, post.created_utc, ContentType.POST))
+
+    return formatedPosts, query
 
 # deamon to run Local's run method
 class Daemon(threading.Thread):
@@ -68,7 +94,8 @@ class Local(object):
 		self.daemons_ = {}
 		# initially no commands
 		self.command_ = []
-
+		#reddit instance
+		self.reddit_ = loadRedditObj()
 
 	# is this id within our range?
 	def is_ours(self, id):
@@ -272,7 +299,12 @@ class Local(object):
 				self.notify(Remote(npredecessor))
 			if command == 'get_successors':
 				result = json.dumps(list(self.get_successors()))
-
+			if command == 'get_posts':
+				posts, query = loadSubredditPosts(self.reddit_, 'all', 10, PostSortingOrder.TOP)
+				titles = []
+				for p in posts:
+					titles.append(p.title)
+				result = json.dumps(titles)
 			# or it could be a user specified operation
 			for t in self.command_:
 				if command == t[0]:
