@@ -9,6 +9,7 @@ class ContentType(Enum):
     COMMENT = 'comment'
 
 class PostSortingOrder(Enum):
+    #The algorithm being confidential, we cannot reproduce it from our db, so right now, top = hot, rising = new when fetching from db
     NEW = 'new'
     TOP = 'top'
     HOT = 'hot'
@@ -24,9 +25,10 @@ class CommentSortingOrder(Enum):
     #Qna?
 
 class Query:
-    def __init__(self, upperLevelId, sortingOrder, date):
+    def __init__(self, upperLevelId, sortingOrder, numberOfItems, date):
         self.upperLevelId = str(upperLevelId) #subreddit or post from which we query the posts/comments
-        self.sortingOrder = str(sortingOrder)
+        self.sortingOrder = sortingOrder
+        self.numberOfItems = int(numberOfItems)
         self.date = int(date) #date of the query, so we can evaluate how stale the data is. In seconds since the epoch
 
 class Content:
@@ -44,11 +46,20 @@ class Content:
         self.creation_date = int(date) #creation date of the submission
         self.type = type #ContentType.POST or ContentType.COMMENT
 
+def parseDbSelectToContent(row):
+    if row[9]:  #By convention we save comments with boolean 1 and posts with boolean 0
+        return Content(row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8],ContentType.COMMENT)
+    else:
+        return Content(row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7],row[8],ContentType.POST)
+
 def loadRedditObj():
     userAgent = "python:decentralizedRedditProject:0.0 (by /u/buprojectaccount )"
-    return praw.Reddit(client_id='NOElzEMDmrk2-Q',
+    try:
+        return praw.Reddit(client_id='NOElzEMDmrk2-Q',
                          client_secret='V-2RNfaQ5ryNEIbJZ8PXe1XSu-M',
                          user_agent=userAgent)
+    except:
+        return None
 
 def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
     #If reddit is reachable:
@@ -84,10 +95,54 @@ def loadPostComments(reddit, post, numberOfComments, sorting):
 
     return formatedComments, query
 
-def saveSubmissionToDb(submissions, query):
-    dbName = hostName + '_' + str(serverPort) + '_localReddit' + '.db'
+def getQueryDate(upperLevelId, sorting, dbName):
+    recordTableName = 'queries'
+
+    #Connection to database
+    conn = sqlite3.connect(dbName)
+    c = conn.cursor()
+    print("Connected to local database: " + dbName)
+
+    c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='queries';''')
+    if c.fetchone() == None:
+        return 0
+    c.execute('''SELECT * FROM queries WHERE upperLevelId = ? AND sorting = ? ;''', upperLevelId, sorting)
+    query = c.fetchone()
+    if query = None:
+        return 0
+    else:
+        #the third element of the tuple is the date
+        return query[2]
+
+def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
+    subTableName = 'submissions'
+    #Connection to database
+    conn = sqlite3.connect(dbName)
+    c = conn.cursor()
+    print("Connected to local database: " + dbName)
+
+    #Verification that submissions table exists
+    c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='submissions';''')
+    if c.fetchone() == None:
+        return []
+
+    subs = []
+    sortSwitcher = {
+        PostSortingOrder.NEW:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date ASC LIMIT ?;',
+        PostSortingOrder.TOP:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
+        PostSortingOrder.HOT:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
+        PostSortingOrder.CONTROVERSIAL:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score ASC LIMIT ?;',
+        PostSortingOrder.RISING:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date ASC LIMIT ?;',
+        CommentSortingOrder.OLD:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date DESC LIMIT ?;',
+        CommentSortingOrder.BEST:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
+    }
+    for row in c.execute(sortSwitcher[sorting], upperLevelId, numberOfItems):
+        subs.append(parseDbSelectToContent(row))
+    return subs
+
+def saveSubmissionToDb(submissions, query, dbName):
     #Right now those names are hardcoded in the queries but it may be better to use these variables
-    subTableName = 'submission'
+    subTableName = 'submissions'
     recordTableName = 'queries'
 
     #Connection to database
@@ -119,7 +174,7 @@ def saveSubmissionToDb(submissions, query):
     c.executemany('INSERT OR REPLACE INTO submissions VALUES (?,?,?,?,?,?,?,?,?,?)', cleanedSubs)
 
     #Insertion of query to queries
-    queryToInsert = (query.upperLevelId, query.sortingOrder, query.date)
+    queryToInsert = (query.upperLevelId, query.sortingOrder.value, query.date)
     c.execute('INSERT OR REPLACE INTO queries VALUES (?,?,?)', queryToInsert)
 
     #committing insertions

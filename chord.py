@@ -72,6 +72,8 @@ class Local(object):
 		self.command_ = []
 		#reddit instance
 		self.reddit_ = loadRedditObj()
+		#Database name of this specific node
+		self.dbName_ = 'localhost_' + str(local_address.port) + '_localReddit' + '.db'
 
 	# is this id within our range?
 	def is_ours(self, id):
@@ -295,6 +297,36 @@ class Local(object):
 					print("Sent request to successor")
 					#NOTE: 10000 is arbitrary, it may be sufficient for small request but it will probably break at some point
 					result = newSock.recv(10000).decode()
+					print("received answer from successor")
+					newSock.close()
+			if command == 'get_posts_from':
+				subreddit = request.split(' ')[0]
+				numberOfPosts = int(request.split(' ')[1])
+				sortingOrder = PostSortingOrder(request.split(' ')[2])
+				if self.is_ours(subreddit):
+					lastQueryDate = getQueryDate(subreddit, sortingOrder, self.dbName_)
+					self.reddit_ = loadRedditObj() #Do this for every query in case there is a disconnect in between.
+					posts = []
+					if (int(time.time()) - lastQueryDate) < 600:	#if the last request of this type was done less than 10 minutes ago.
+						posts = getSubmissionsFromDb(subreddit, sortingOrder, numberOfPosts, self.dbName_)
+					else:
+						if self.reddit_ == None:
+							print('Reddit is not available from this node')
+							#We fetch the data from the db anyways, even if there's not enough posts.
+							posts = getSubmissionsFromDb(subreddit, sortingOrder, numberOfPosts, self.dbName_)
+						else:
+							#Fetch posts from reddit
+							posts,_ = loadSubredditPosts(self.reddit_, subreddit, numberOfPosts, sortingOrder)
+					#Careful with that, it's a bytes object, so it will most likely break the .decode() we have in create_chord()
+					result = pickle.dumps(posts)
+				else:
+					succ = self.find_successor(subreddit)
+					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					newSock.connect((succ.address_.ip, succ.address_.port))
+					newSock.sendall((command + ' ' + request+ "\r\n").encode())
+					print("Sent request to successor")
+					#NOTE: 10000 is arbitrary, it may be sufficient for small request but it will probably break at some point
+					result = newSock.recv(10000)
 					print("received answer from successor")
 					newSock.close()
 			# or it could be a user specified operation
