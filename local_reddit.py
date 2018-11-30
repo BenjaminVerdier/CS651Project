@@ -61,7 +61,7 @@ def loadRedditObj():
     except:
         return None
 
-def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
+def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting, dbName):
     #If reddit is reachable:
     sortSwitcher = {
         PostSortingOrder.NEW:reddit.subreddit(subreddit).new(limit=numberOfPosts),
@@ -77,9 +77,11 @@ def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
     for post in posts:
         formatedPosts.append(Content(post.id, post.subreddit, post.score, post.author, post.title, post.selftext, "", post.url, post.created_utc, ContentType.POST))
 
-    return formatedPosts, query
+    saveSubmissionToDb(formatedPosts, query, dbName)
 
-def loadPostComments(reddit, post, numberOfComments, sorting):
+    return formatedPosts
+
+def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
     #If reddit is reachable:
     sub = reddit.submission(id=post)
     sub.comment_sort = sorting
@@ -93,7 +95,9 @@ def loadPostComments(reddit, post, numberOfComments, sorting):
             post = reddit.comment(com)
             formatedComments.append(Content(post.id, post.link_id, post.score, post.author, "", post.body, post.parent_id, "", post.created_utc, ContentType.COMMENT))
 
-    return formatedComments, query
+    saveSubmissionToDb(formatedComments, query, dbName)
+
+    return formatedComments
 
 def getQueryDate(upperLevelId, sorting, dbName):
     recordTableName = 'queries'
@@ -105,13 +109,16 @@ def getQueryDate(upperLevelId, sorting, dbName):
 
     c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='queries';''')
     if c.fetchone() == None:
+        conn.close()
         return 0
-    c.execute('''SELECT * FROM queries WHERE upperLevelId = ? AND sorting = ? ;''', upperLevelId, sorting)
+    c.execute('''SELECT * FROM queries WHERE upperLevelId = ? AND sorting = ? ;''', (upperLevelId, sorting.value))
     query = c.fetchone()
     if query == None:
+        conn.close()
         return 0
     else:
         #the third element of the tuple is the date
+        conn.close()
         return query[2]
 
 def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
@@ -136,7 +143,7 @@ def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
         CommentSortingOrder.OLD:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date DESC LIMIT ?;',
         CommentSortingOrder.BEST:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
     }
-    for row in c.execute(sortSwitcher[sorting], upperLevelId, numberOfItems):
+    for row in c.execute(sortSwitcher[sorting], (upperLevelId, numberOfItems)):
         subs.append(parseDbSelectToContent(row))
     return subs
 
@@ -181,7 +188,7 @@ def saveSubmissionToDb(submissions, query, dbName):
     conn.commit()
 
     #Debug
-    for row in c.execute('''SELECT upperLevelId FROM queries;'''):
+    for row in c.execute('''SELECT * FROM queries;'''):
         print(row)
 
     #Closing Connection

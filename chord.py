@@ -307,11 +307,12 @@ class Local(object):
 				sortingOrder = PostSortingOrder(request.split(' ')[2])
 				key = int(hashlib.md5(subreddit.encode()).hexdigest()[:2], 16)
 				if self.is_ours(key):
-					print("The key is ours")
 					lastQueryDate = getQueryDate(subreddit, sortingOrder, self.dbName_)
+					print(lastQueryDate)
 					self.reddit_ = loadRedditObj() #Do this for every query in case there is a disconnect in between.
 					posts = []
 					if (int(time.time()) - lastQueryDate) < 600:	#if the last request of this type was done less than 10 minutes ago.
+						print("We get posts from our own database")
 						posts = getSubmissionsFromDb(subreddit, sortingOrder, numberOfPosts, self.dbName_)
 					else:
 						if self.reddit_ == None:
@@ -319,8 +320,9 @@ class Local(object):
 							#We fetch the data from the db anyways, even if there's not enough posts.
 							posts = getSubmissionsFromDb(subreddit, sortingOrder, numberOfPosts, self.dbName_)
 						else:
+							print('We fetch posts from reddit')
 							#Fetch posts from reddit
-							posts,_ = loadSubredditPosts(self.reddit_, subreddit, numberOfPosts, sortingOrder)
+							posts = loadSubredditPosts(self.reddit_, subreddit, numberOfPosts, sortingOrder, self.dbName_)
 					#Careful with that, it's a bytes object, so it will most likely break the .decode() we have in create_chord()
 					result = pickle.dumps(posts)
 				else:
