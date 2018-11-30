@@ -1,6 +1,6 @@
 #!/bin/python
 import sys
-import json
+import simplejson as json
 import socket
 import threading
 import random
@@ -290,7 +290,7 @@ class Local(object):
 				else:
 					succ = self.find_successor(int(request))
 					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-					newSock.connect((pred.address_.ip, pred.address_.port))
+					newSock.connect((succ.address_.ip, succ.address_.port))
 					newSock.sendall((command + ' ' + request+ "\r\n").encode())
 					print("Sent request to successor")
 					#NOTE: 10000 is arbitrary, it may be sufficient for small request but it will probably break at some point
