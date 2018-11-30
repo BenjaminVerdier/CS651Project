@@ -6,6 +6,8 @@ import threading
 import random
 import time
 import praw
+import hashlib
+import pickle
 
 from address import Address, inrange
 from remote import Remote
@@ -303,7 +305,9 @@ class Local(object):
 				subreddit = request.split(' ')[0]
 				numberOfPosts = int(request.split(' ')[1])
 				sortingOrder = PostSortingOrder(request.split(' ')[2])
-				if self.is_ours(subreddit):
+				key = int(hashlib.md5(subreddit.encode()).hexdigest()[:2], 16)
+				if self.is_ours(key):
+					print("The key is ours")
 					lastQueryDate = getQueryDate(subreddit, sortingOrder, self.dbName_)
 					self.reddit_ = loadRedditObj() #Do this for every query in case there is a disconnect in between.
 					posts = []
@@ -320,7 +324,7 @@ class Local(object):
 					#Careful with that, it's a bytes object, so it will most likely break the .decode() we have in create_chord()
 					result = pickle.dumps(posts)
 				else:
-					succ = self.find_successor(subreddit)
+					succ = self.find_successor(key)
 					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					newSock.connect((succ.address_.ip, succ.address_.port))
 					newSock.sendall((command + ' ' + request+ "\r\n").encode())

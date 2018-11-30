@@ -72,7 +72,7 @@ def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting):
     }
 
     posts = sortSwitcher[sorting]
-    query = Query(subreddit, sorting,time.time())
+    query = Query(subreddit, sorting, numberOfPosts, time.time())
     formatedPosts = []
     for post in posts:
         formatedPosts.append(Content(post.id, post.subreddit, post.score, post.author, post.title, post.selftext, "", post.url, post.created_utc, ContentType.POST))
@@ -108,7 +108,7 @@ def getQueryDate(upperLevelId, sorting, dbName):
         return 0
     c.execute('''SELECT * FROM queries WHERE upperLevelId = ? AND sorting = ? ;''', upperLevelId, sorting)
     query = c.fetchone()
-    if query = None:
+    if query == None:
         return 0
     else:
         #the third element of the tuple is the date
