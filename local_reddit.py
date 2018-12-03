@@ -84,7 +84,7 @@ def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting, dbName):
 def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
     #If reddit is reachable:
     sub = reddit.submission(id=post)
-    sub.comment_sort = sorting
+    sub.comment_sort = sorting.value
     #sub.comments.replace_more(limit=0)
     comments = sub.comments.list()[:numberOfComments]
     query = Query(post, sorting,time.time())
