@@ -340,7 +340,11 @@ class Local(object):
 				if command == t[0]:
 					result = t[1](request)
 
-			send_to_socket(conn, result)
+			#If we're sending back a bytes object, we don't want to used send_to_socket as it's for strings only
+			if command == 'get_posts_from':
+				conn.sendall(result)
+			else:
+				send_to_socket(conn, result)
 			conn.close()
 
 			if command == 'shutdown':
