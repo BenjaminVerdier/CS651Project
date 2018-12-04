@@ -33,6 +33,10 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 		Returns:
 			A string to be sent to the chord ring
 		"""
+		if self.path == '/':
+			#landing page
+			return "get_posts_from all 10 hot"
+
 		#self.path should follow the form:
 		#posts/subreddit/number_of_posts/ordering
 		#or:

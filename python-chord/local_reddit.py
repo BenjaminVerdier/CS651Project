@@ -135,15 +135,15 @@ def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
 
     subs = []
     sortSwitcher = {
-        PostSortingOrder.NEW:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date ASC LIMIT ?;',
-        PostSortingOrder.TOP:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
-        PostSortingOrder.HOT:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
-        PostSortingOrder.CONTROVERSIAL:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score ASC LIMIT ?;',
-        PostSortingOrder.RISING:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date ASC LIMIT ?;',
-        CommentSortingOrder.OLD:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY creation_date DESC LIMIT ?;',
-        CommentSortingOrder.BEST:'SELECT * FROM submissions WHERE upperLevelId=? ORDER BY score DESC LIMIT ?;',
+        PostSortingOrder.NEW:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date ASC LIMIT ?;',
+        PostSortingOrder.TOP:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
+        PostSortingOrder.HOT:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
+        PostSortingOrder.CONTROVERSIAL:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score ASC LIMIT ?;',
+        PostSortingOrder.RISING:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date ASC LIMIT ?;',
+        CommentSortingOrder.OLD:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date DESC LIMIT ?;',
+        CommentSortingOrder.BEST:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
     }
-    for row in c.execute(sortSwitcher[sorting], (upperLevelId, numberOfItems)):
+    for row in c.execute(sortSwitcher[sorting], ('%' if upperLevelId == 'all' else upperLevelId, numberOfItems)):
         subs.append(parseDbSelectToContent(row))
     return subs
 
