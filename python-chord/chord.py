@@ -307,7 +307,7 @@ class Local(object):
 				sortingOrder = PostSortingOrder(request.split(' ')[2])
 				key = int(hashlib.md5(subreddit.encode()).hexdigest()[:2], 16)
 				if self.is_ours(key):
-					lastQueryDate = getQueryDate(subreddit, sortingOrder, self.dbName_)
+					lastQueryDate = getQueryDate(subreddit, sortingOrder, numberOfPosts, self.dbName_)
 					print(lastQueryDate)
 					self.reddit_ = loadRedditObj() #Do this for every query in case there is a disconnect in between.
 					posts = []

@@ -87,7 +87,7 @@ def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
     sub.comment_sort = sorting.value
     #sub.comments.replace_more(limit=0)
     comments = sub.comments.list()[:numberOfComments]
-    query = Query(post, sorting,time.time())
+    query = Query(post, sorting, numberOfComments, time.time())
     formatedComments = []
     for com in comments:
         #We need to filter the 'more comments' stuff:
@@ -99,7 +99,7 @@ def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
 
     return formatedComments
 
-def getQueryDate(upperLevelId, sorting, dbName):
+def getQueryDate(upperLevelId, sorting, numberOfItems, dbName):
     recordTableName = 'queries'
 
     #Connection to database
@@ -111,7 +111,7 @@ def getQueryDate(upperLevelId, sorting, dbName):
     if c.fetchone() == None:
         conn.close()
         return 0
-    c.execute('''SELECT * FROM queries WHERE upperLevelId = ? AND sorting = ? ;''', (upperLevelId, sorting.value))
+    c.execute('''SELECT * FROM queries WHERE upperLevelId = ? AND sorting = ? AND numberOfItems >= ?;''', (upperLevelId, sorting.value, numberOfItems))
     query = c.fetchone()
     if query == None:
         conn.close()
@@ -119,7 +119,7 @@ def getQueryDate(upperLevelId, sorting, dbName):
     else:
         #the third element of the tuple is the date
         conn.close()
-        return query[2]
+        return query[3]
 
 def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
     subTableName = 'submissions'
@@ -167,7 +167,7 @@ def saveSubmissionToDb(submissions, query, dbName):
     c.execute('''SELECT name FROM sqlite_master WHERE type='table' AND name='queries';''')
     if c.fetchone() == None:
         c.execute('''CREATE TABLE queries
-        (upperLevelId text, sorting text, date integer, PRIMARY KEY (upperLevelId, sorting))
+        (upperLevelId text, sorting text, numberOfItems integer, date integer, PRIMARY KEY (upperLevelId, sorting))
         ;''')
         conn.commit()
 
@@ -181,8 +181,8 @@ def saveSubmissionToDb(submissions, query, dbName):
     c.executemany('INSERT OR REPLACE INTO submissions VALUES (?,?,?,?,?,?,?,?,?,?)', cleanedSubs)
 
     #Insertion of query to queries
-    queryToInsert = (query.upperLevelId, query.sortingOrder.value, query.date)
-    c.execute('INSERT OR REPLACE INTO queries VALUES (?,?,?)', queryToInsert)
+    queryToInsert = (query.upperLevelId, query.sortingOrder.value, query.numberOfItems, query.date)
+    c.execute('INSERT OR REPLACE INTO queries VALUES (?,?,?,?)', queryToInsert)
 
     #committing insertions
     conn.commit()
