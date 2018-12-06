@@ -12,7 +12,7 @@ hostName = "localhost"
 if (len(sys.argv) > 1):
 	serverPort = int(sys.argv[1])
 else:
-	serverPort = 80
+	serverPort = 8080
 
 class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 	"""An HTTP Request Handler that forwards requests to a chord ring
@@ -127,7 +127,7 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 			N/A
 		"""
 		if not self.__chord_host:
-			self.__respond_failure
+			self.__respond_failure()
 		else:
 			if '/favicon.ico' in self.path:
 				self.send_response(200)
