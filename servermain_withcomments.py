@@ -116,8 +116,8 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 					HTML_index = str(count) + ")  "
 					HTML_upvotes = "[Upvotes: " + str(submission.score) + "]"
 					HTML_content = " <a href=\"" + str(submission.url) + "\">" + str(submission.title) + "</a> "
-					HTML_subreddit = " (<a href=\"http://" + hostName + ":" + str(serverPort) + "/posts/" + str(submission.upperLevelId) + "\">r/" + str(submission.upperLevelId) + "</a>) "
-					HTML_comment = " (<a href=\"http://" + hostName + ":" + str(serverPort) + "/comments/" + str(submission.id) + "\">comments</a>) "
+					HTML_subreddit = " (<a href=\"http://" + hostName + ":" + str(serverPort) + "/posts/" + str(submission.upperLevelId) + "\"><b>r/" + str(submission.upperLevelId) + "</b></a>) "
+					HTML_comment = " (<a href=\"http://" + hostName + ":" + str(serverPort) + "/comments/" + str(submission.id) + "\"><b>comments</b></a>) "
 
 					self.wfile.write(bytes("<p>" +  HTML_index + HTML_upvotes + " - " + HTML_content + HTML_subreddit + HTML_comment + "</p>", "utf-8"))
 					# self.wfile.write(bytes("<p>%s</p>" % result, "utf-8"))
@@ -126,7 +126,7 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 				for submission in result:
 					HTML_upvotes = "Upvotes: " + str(submission.score)
 					HTML_content = str(submission.content)
-					HTML_replies = "  (<a href=\"http://" + hostName + ":" + str(serverPort) + "/comments/" + str(submission.id) + "\">see replies</a>) "
+					HTML_replies = "  (<a href=\"http://" + hostName + ":" + str(serverPort) + "/comments/" + str(submission.id) + "\"><b>see replies</b></a>) "
 
 					self.wfile.write(bytes("<p>" + HTML_upvotes + " - " + HTML_content + HTML_replies + "</p>", "utf-8"))
 					count += 1

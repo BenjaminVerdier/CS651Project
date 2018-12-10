@@ -7,6 +7,7 @@ from enum import Enum
 class ContentType(Enum):
     POST = 'post'
     COMMENT = 'comment'
+    REPLY = 'reply'
 
 class PostSortingOrder(Enum):
     #The algorithm being confidential, we cannot reproduce it from our db, so right now, top = hot, rising = new when fetching from db
@@ -98,6 +99,9 @@ def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
     saveSubmissionToDb(formatedComments, query, dbName)
 
     return formatedComments
+
+def loadCommentReplies(reddit, comment, numberOfComments, sorting, dbName):
+    pass
 
 def getQueryDate(upperLevelId, sorting, numberOfItems, dbName):
     recordTableName = 'queries'
