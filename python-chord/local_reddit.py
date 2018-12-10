@@ -84,24 +84,41 @@ def loadSubredditPosts(reddit, subreddit, numberOfPosts, sorting, dbName):
 
 def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
     #If reddit is reachable:
-    sub = reddit.submission(id=post)
-    sub.comment_sort = sorting.value
+    pst = reddit.submission(id=post)
+    pst.comment_sort = sorting.value
     #sub.comments.replace_more(limit=0)
-    comments = sub.comments.list()[:int(numberOfComments)]
+    #comments = pst.comments.list()[:int(numberOfComments)]
     query = Query(post, sorting, numberOfComments, time.time())
     formatedComments = []
-    for com in comments:
+    numCom = 0
+    for com in pst.comments: #Only doing upper level comments
         #We need to filter the 'more comments' stuff:
         if str(type(com)) == "<class 'praw.models.reddit.comment.Comment'>":
-            post = reddit.comment(com)
-            formatedComments.append(Content(post.id, post.link_id, post.score, post.author, "", post.body, post.parent_id, "", post.created_utc, ContentType.COMMENT))
+            #post = reddit.comment(com)
+            formatedComments.append(Content(com.id, com.link_id, com.score, com.author, "", com.body, com.parent_id, "", com.created_utc, ContentType.COMMENT))
+        numCom = numCom + 1
+        if numCom >= numberOfComments:
+            break
 
     saveSubmissionToDb(formatedComments, query, dbName)
 
     return formatedComments
 
 def loadCommentReplies(reddit, comment, numberOfComments, sorting, dbName):
-    pass
+    cmt = reddit.comment(id=comment)
+    cmt.refresh()
+    query = Query(comment, sorting, numberOfComments, time.time())
+    formatedComments = []
+    numCom = 0
+    for com in cmt.replies: #Only doing upper level comments
+        #We need to filter the 'more comments' stuff:
+        if str(type(com)) == "<class 'praw.models.reddit.comment.Comment'>":
+            formatedComments.append(Content(com.id, com.link_id, com.score, com.author, "", com.body, com.parent_id, "", com.created_utc, ContentType.COMMENT))
+        numCom = numCom + 1
+        if numCom >= numberOfComments:
+            break
+    saveSubmissionToDb(formatedComments, query, dbName)
+    return formatedComments
 
 def getQueryDate(upperLevelId, sorting, numberOfItems, dbName):
     recordTableName = 'queries'

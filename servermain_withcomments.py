@@ -54,11 +54,14 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 		elif splitRequest[0] == "comments":
 			command = "get_comments_from "
 			content_type = local_reddit.ContentType.COMMENT
+		elif splitRequest[0] == "replies":
+			command = "get_replies_from "
+			content_type = local_reddit.ContentType.COMMENT
 		else:
 			command = "" #change this to the right command
 			return command, content_type
 
-
+		#Doesn't work for replies because first comes the post, then the parent coomment, then the number of comments
 		command = command + splitRequest[1] + " "
 		if len(splitRequest) > 2:
 			command = command + splitRequest[2] + " "
@@ -126,7 +129,7 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 				for submission in result:
 					HTML_upvotes = "Upvotes: " + str(submission.score)
 					HTML_content = str(submission.content)
-					HTML_replies = "  (<a href=\"http://" + hostName + ":" + str(serverPort) + "/comments/" + str(submission.id) + "\"><b>see replies</b></a>) "
+					HTML_replies = "  (<a href=\"http://" + hostName + ":" + str(serverPort) + "/replies/" + str(submission.upperLevelId[3:]) + "/" + str(submission.id) + "/10" + "\"><b>see replies</b></a>) "
 
 					self.wfile.write(bytes("<p>" + HTML_upvotes + " - " + HTML_content + HTML_replies + "</p>", "utf-8"))
 					count += 1

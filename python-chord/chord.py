@@ -352,7 +352,7 @@ class Local(object):
 					print('lastQueryDate: ' + str(last_query_date))
 					self.reddit_ = loadRedditObj()
 					comments = []
-					if (int(time.time()) - last_query_date) < 600: 
+					if (int(time.time()) - last_query_date) < 600:
 						print("We get comments from our own database")
 						comments = getSubmissionsFromDb(post, sorting_order, number_of_comments, self.dbName_)
 					else:
@@ -361,7 +361,7 @@ class Local(object):
 							comments = loadPostComments(self.reddit_, post, number_of_comments, sorting_order, self.dbName_)
 						else:
 							print('Reddit is not available from this node')
-							comments = getSubmissionsFromDb(post, sorting_order, number_of_posts, self.dbName_)
+							comments = getSubmissionsFromDb(post, sorting_order, number_of_comments, self.dbName_)
 					result = pickle.dumps(comments, 0)
 				else:
 					succ = self.find_successor(key)
@@ -374,13 +374,48 @@ class Local(object):
 					print("received answer from successor")
 					newSock.close()
 
+			if command == 'get_replies_from':
+				# get replies, similar to get_comments_from
+				request_split = request.split(' ')
+				post = request_split[0]
+				comment = request_split[1]
+				number_of_comments = int(request_split[2])
+				sorting_order = CommentSortingOrder('best')
+				key = int(hashlib.md5(post.encode()).hexdigest()[:2], 16)
+
+				if self.is_ours(key):
+					last_query_date = getQueryDate(comment, sorting_order, number_of_comments, self.dbName_)
+					print('lastQueryDate: ' + str(last_query_date))
+					self.reddit_ = loadRedditObj()
+					comments = []
+					if (int(time.time()) - last_query_date) < 600:
+						print("We get comments from our own database")
+						comments = getSubmissionsFromDb(comment, sorting_order, number_of_comments, self.dbName_)
+					else:
+						if self.reddit_:
+							print('We fetch comments from reddit')
+							comments = loadCommentReplies(self.reddit_, comment, number_of_comments, sorting_order, self.dbName_)
+						else:
+							print('Reddit is not available from this node')
+							comments = getSubmissionsFromDb(comment, sorting_order, number_of_comments, self.dbName_)
+					result = pickle.dumps(comments, 0)
+				else:
+					succ = self.find_successor(key)
+					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					newSock.connect((succ.address_.ip, succ.address_.port))
+					newSock.sendall((command + ' ' + request+ "\r\n").encode())
+					print("Sent request to successor")
+					#NOTE: 10000 is arbitrary, it may be sufficient for small request but it will probably break at some point
+					result = newSock.recv(10000)
+					print("received answer from successor")
+					newSock.close()
 			# or it could be a user specified operation
 			for t in self.command_:
 				if command == t[0]:
 					result = t[1](request)
 
 			#If we're sending back a bytes object, we don't want to used send_to_socket as it's for strings only
-			if command == 'get_posts_from' or command == 'get_comments_from':
+			if command == 'get_posts_from' or command == 'get_comments_from' or command == 'get_replies_from':
 				conn.sendall(result)
 			else:
 				send_to_socket(conn, result)
