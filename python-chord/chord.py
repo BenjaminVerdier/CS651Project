@@ -302,29 +302,32 @@ class Local(object):
 					print("received answer from successor")
 					newSock.close()
 			if command == 'get_posts_from':
-				subreddit = request.split(' ')[0]
-				numberOfPosts = int(request.split(' ')[1])
-				sortingOrder = PostSortingOrder(request.split(' ')[2])
+				request_split = request.split(' ')
+				subreddit = request_split[0]
+				number_of_posts = int(request_split[1])
+				sorting_order = PostSortingOrder(request_split[2])
 				key = int(hashlib.md5(subreddit.encode()).hexdigest()[:2], 16)
+
 				if self.is_ours(key):
-					lastQueryDate = getQueryDate(subreddit, sortingOrder, numberOfPosts, self.dbName_)
-					print(lastQueryDate)
+					lastQueryDate = getQueryDate(subreddit, sorting_order, number_of_posts, self.dbName_)
+					print('lastQueryDate: ' + str(lastQueryDate))
 					self.reddit_ = loadRedditObj() #Do this for every query in case there is a disconnect in between.
 					posts = []
 					if (int(time.time()) - lastQueryDate) < 600:	#if the last request of this type was done less than 10 minutes ago.
 						print("We get posts from our own database")
-						posts = getSubmissionsFromDb(subreddit, sortingOrder, numberOfPosts, self.dbName_)
+						posts = getSubmissionsFromDb(subreddit, sorting_order, number_of_posts, self.dbName_)
 					else:
 						if self.reddit_ == None:
 							print('Reddit is not available from this node')
 							#We fetch the data from the db anyways, even if there's not enough posts.
-							posts = getSubmissionsFromDb(subreddit, sortingOrder, numberOfPosts, self.dbName_)
+							posts = getSubmissionsFromDb(subreddit, sorting_order, number_of_posts, self.dbName_)
 						else:
 							print('We fetch posts from reddit')
 							#Fetch posts from reddit
-							posts = loadSubredditPosts(self.reddit_, subreddit, numberOfPosts, sortingOrder, self.dbName_)
-					#Careful with that, it's a bytes object, so it will most likely break the .decode() we have in create_chord()
-					result = pickle.dumps(posts)
+							posts = loadSubredditPosts(self.reddit_, subreddit, number_of_posts, sorting_order, self.dbName_)
+					# Careful with that, it's a bytes object, so it will most likely break the .decode() we have in create_chord()
+					# Using pickle.dumps(*data*, 0) with the default encoding solves this problem in create_chord()
+					result = pickle.dumps(posts, 0)
 				else:
 					succ = self.find_successor(key)
 					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -335,13 +338,49 @@ class Local(object):
 					result = newSock.recv(10000)
 					print("received answer from successor")
 					newSock.close()
+			if command == 'get_comments_from':
+				# get comments, similar to get_posts_from
+				# requires the specific post ID
+				request_split = request.split(' ')
+				post = request_split[0]
+				number_of_comments = int(request_split[1])
+				sorting_order = CommentSortingOrder(request_split[2])
+				key = int(hashlib.md5(post.encode()).hexdigest()[:2], 16)
+
+				if self.is_ours(key):
+					last_query_date = getQueryDate(post, sorting_order, number_of_comments, self.dbName_)
+					print('lastQueryDate: ' + str(last_query_date))
+					self.reddit_ = loadRedditObj()
+					comments = []
+					if (int(time.time()) - last_query_date) < 600: 
+						print("We get comments from our own database")
+						comments = getSubmissionsFromDb(post, sorting_order, number_of_comments, self.dbName_)
+					else:
+						if self.reddit_:
+							print('We fetch comments from reddit')
+							comments = loadPostComments(self.reddit_, post, number_of_comments, sorting_order, self.dbName_)
+						else:
+							print('Reddit is not available from this node')
+							comments = getSubmissionsFromDb(post, sorting_order, number_of_posts, self.dbName_)
+					result = pickle.dumps(comments, 0)
+				else:
+					succ = self.find_successor(key)
+					newSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					newSock.connect((succ.address_.ip, succ.address_.port))
+					newSock.sendall((command + ' ' + request+ "\r\n").encode())
+					print("Sent request to successor")
+					#NOTE: 10000 is arbitrary, it may be sufficient for small request but it will probably break at some point
+					result = newSock.recv(10000)
+					print("received answer from successor")
+					newSock.close()
+
 			# or it could be a user specified operation
 			for t in self.command_:
 				if command == t[0]:
 					result = t[1](request)
 
 			#If we're sending back a bytes object, we don't want to used send_to_socket as it's for strings only
-			if command == 'get_posts_from':
+			if command == 'get_posts_from' or command == 'get_comments_from':
 				conn.sendall(result)
 			else:
 				send_to_socket(conn, result)

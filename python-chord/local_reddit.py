@@ -86,7 +86,7 @@ def loadPostComments(reddit, post, numberOfComments, sorting, dbName):
     sub = reddit.submission(id=post)
     sub.comment_sort = sorting.value
     #sub.comments.replace_more(limit=0)
-    comments = sub.comments.list()[:numberOfComments]
+    comments = sub.comments.list()[:int(numberOfComments)]
     query = Query(post, sorting, numberOfComments, time.time())
     formatedComments = []
     for com in comments:
@@ -140,6 +140,8 @@ def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
         PostSortingOrder.HOT:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
         PostSortingOrder.CONTROVERSIAL:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score ASC LIMIT ?;',
         PostSortingOrder.RISING:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date ASC LIMIT ?;',
+        CommentSortingOrder.NEW:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date DESC LIMIT ?;',
+        CommentSortingOrder.TOP:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
         CommentSortingOrder.OLD:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date DESC LIMIT ?;',
         CommentSortingOrder.BEST:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
     }
