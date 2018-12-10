@@ -113,25 +113,27 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 		self.wfile.write(bytes("<html><head><title>Local Reddit</title></head><body>", "utf-8"))
 		print(content_type.value)
 		if content_type:
-			count = 0
+			count = 1
 			if content_type.value == 'post':
 				for submission in result:
 					HTML_index = str(count) + ")  "
-					HTML_upvotes = "[Upvotes: " + str(submission.score) + "]"
-					HTML_content = " <a href=\"" + str(submission.url) + "\">" + str(submission.title) + "</a> "
+					HTML_upvotes = "[Score: " + str(submission.score) + "]"
+					HTML_content = " <a href=\"" + str(submission.url) + "\">" + str(submission.title) + "</a>"
+					HTML_author = "u/" + submission.author
 					HTML_subreddit = " (<a href=\"http://" + hostName + ":" + str(serverPort) + "/posts/" + str(submission.upperLevelId) + "\"><b>r/" + str(submission.upperLevelId) + "</b></a>) "
 					HTML_comment = " (<a href=\"http://" + hostName + ":" + str(serverPort) + "/comments/" + str(submission.id) + "\"><b>comments</b></a>) "
 
-					self.wfile.write(bytes("<p>" +  HTML_index + HTML_upvotes + " - " + HTML_content + HTML_subreddit + HTML_comment + "</p>", "utf-8"))
+					self.wfile.write(bytes("<p>" +  HTML_index + HTML_upvotes + " - " + HTML_content + " by " + HTML_author + " in " + HTML_subreddit + HTML_comment + "</p>", "utf-8"))
 					# self.wfile.write(bytes("<p>%s</p>" % result, "utf-8"))
 					count += 1
 			elif content_type.value == 'comment':
 				for submission in result:
-					HTML_upvotes = "Upvotes: " + str(submission.score)
+					HTML_upvotes = "[Score: " + str(submission.score) + "]"
 					HTML_content = str(submission.content)
+					HTML_author = "u/" + submission.author
 					HTML_replies = "  (<a href=\"http://" + hostName + ":" + str(serverPort) + "/replies/" + str(submission.upperLevelId[3:]) + "/" + str(submission.id) + "/10" + "\"><b>see replies</b></a>) "
 
-					self.wfile.write(bytes("<p>" + HTML_upvotes + " - " + HTML_content + HTML_replies + "</p>", "utf-8"))
+					self.wfile.write(bytes("<p>" + HTML_upvotes + " - " + HTML_content + " by " + HTML_author + " " + HTML_replies + "</p>", "utf-8"))
 					count += 1
 			else:
 				raise Exception('Unknown content type')
