@@ -149,7 +149,7 @@ def getSubmissionsFromDb(upperLevelId, sorting, numberOfItems, dbName):
         CommentSortingOrder.OLD:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY creation_date DESC LIMIT ?;',
         CommentSortingOrder.BEST:'SELECT * FROM submissions WHERE upperLevelId LIKE ? ORDER BY score DESC LIMIT ?;',
     }
-    for row in c.execute(sortSwitcher[sorting], ('%' if upperLevelId == 'all' else upperLevelId, numberOfItems)):
+    for row in c.execute(sortSwitcher[sorting], ('%' if upperLevelId == 'all' else "%" + upperLevelId, numberOfItems)):
         subs.append(parseDbSelectToContent(row))
     return subs
 
@@ -194,8 +194,8 @@ def saveSubmissionToDb(submissions, query, dbName):
     conn.commit()
 
     #Debug
-    for row in c.execute('''SELECT * FROM queries;'''):
-        print(row)
+    #for row in c.execute('''SELECT * FROM submissions;'''):
+    #    print(row)
 
     #Closing Connection
     conn.close()
