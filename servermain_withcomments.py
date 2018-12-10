@@ -35,7 +35,7 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 		"""
 		if self.path == '/':
 			#landing page
-			return "get_posts_from all 10 hot"
+			return "get_posts_from all 10 hot", local_reddit.ContentType.POST
 
 		#self.path should follow the form:
 		#posts/subreddit/number_of_posts/ordering
@@ -44,7 +44,7 @@ class ChordRingAwareHTTPRequestHandler(BaseHTTPRequestHandler):
 		#If no ordering, we default to top, if no number of posts, we default to 10
 		splitRequest = self.path[1:].split('/')
 		print(self.path)
-		
+
 		command = ""
 		content_type = None
 
