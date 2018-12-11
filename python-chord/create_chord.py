@@ -43,7 +43,9 @@ while 1:
 				ports_list.append(address.port)
 				print("New node at port %s" % address.port)
 				address_list.append(address)
-				locals_list.append(Local(address, locals_list[random.randrange(len(locals_list))].address_))
+				localNode = Local(address, locals_list[random.randrange(len(locals_list))].address_)
+				localNode.start()
+				locals_list.append(localNode)
 				break
 	elif command == "kill_all":
 		subprocess.Popen("taskkill /F /PID " + str(os.getpid()))
